@@ -4,7 +4,7 @@ Orchestrates PDF ingestion, database persistence, demo paper creation,
 indexing, and multi-format exports.
 """
 
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 from pathlib import Path
 import json
 import shutil
