@@ -89,18 +89,18 @@ class EquationValidator:
     @staticmethod
     def _categorize_equation(eq_str: str) -> str:
         """Categorizes mathematical equation based on its operators and symbols."""
-        if any(tok in eq_str for tok in [r"\partial", r"\nabla", "d/dt", "d^2", r"\nabla^2"]):
-            return "Differential"
-        if any(tok in eq_str for tok in [r"\int", r"\oint", r"\iint"]):
-            return "Integral"
-        if any(tok in eq_str for tok in [r"\sum", r"\prod"]):
-            return "Discrete / Series"
         if any(tok in eq_str for tok in [r"\psi", r"\hat", r"\langle", r"\rangle", r"\hbar", r"\dagger"]):
             return "Quantum Mechanical"
         if any(tok in eq_str for tok in [r"\gamma = \frac{1}{\sqrt", "c^2", r"p^\mu", r"T^{\mu\nu}", r"g_{\mu\nu}"]):
             return "Relativistic / Tensor"
         if any(tok in eq_str for tok in [r"\mu", r"\sigma", r"\exp(-\frac{(x-\mu)", "P(", r"\mathcal{N}"]):
             return "Statistical / Distribution"
+        if any(tok in eq_str for tok in [r"\partial", r"\nabla", "d/dt", "d^2", r"\nabla^2"]):
+            return "Differential"
+        if any(tok in eq_str for tok in [r"\int", r"\oint", r"\iint"]):
+            return "Integral"
+        if any(tok in eq_str for tok in [r"\sum", r"\prod"]):
+            return "Discrete / Series"
         if any(tok in eq_str for tok in [r"\begin{pmatrix}", r"\begin{bmatrix}", r"\det"]):
             return "Matrix / Linear Algebra"
         return "Algebraic"
