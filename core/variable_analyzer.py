@@ -4,7 +4,7 @@ Extracts mathematical symbols, classifies their roles (Dependent, Independent, C
 infers standard SI units, and configures interactive slider bounds.
 """
 
-from typing import List, Dict, Any, Optional, Set
+from typing import List, Dict, Any, Optional, Set, Tuple
 import re
 from core.scientific_constants import get_constant_by_symbol, SCIENTIFIC_CONSTANTS
 
