@@ -246,3 +246,4 @@ if parsed_a is not None and parsed_b is not None and shared_symbols:
         st.plotly_chart(fig, use_container_width=True)
 else:
     st.caption("ℹ️ Comparative overlay plot is available when both equations share at least one numerical coordinate and are symbolically evaluable.")
+

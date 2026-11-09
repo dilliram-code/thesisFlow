@@ -287,3 +287,4 @@ class ReportService:
 
 # Singleton instance
 report_service = ReportService()
+

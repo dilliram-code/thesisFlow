@@ -1050,3 +1050,4 @@ window.addEventListener("DOMContentLoaded", () => {
   initUploadHandler();
   refreshDashboard();
 });
+
