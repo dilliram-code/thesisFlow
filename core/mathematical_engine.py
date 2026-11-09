@@ -78,14 +78,17 @@ class MathematicalEngine:
         s = s.replace(r"\theta", "theta").replace(r"\pi", "pi").replace(r"\tau", "tau")
         s = s.replace(r"\psi", "psi").replace(r"\Delta", "Delta")
 
-        # Fractions: \frac{a}{b} -> ((a)/(b))
-        # Handle nested fractions iteratively
-        for _ in range(4):
-            s = re.sub(r"\\frac\{([^{}]+)\}\{([^{}]+)\}", r"((\1)/(\2))", s)
+        # Functions
+        s = re.sub(r"\\(sin|cos|tan|exp|ln|log|sinh|cosh|tanh)\b", r"\1", s)
+        s = s.replace(r"\ln", "ln")
 
-        # Square roots: \sqrt{a} -> sqrt(a)
-        for _ in range(3):
+        # Square roots first: \sqrt{a} -> sqrt(a)
+        for _ in range(4):
             s = re.sub(r"\\sqrt\{([^{}]+)\}", r"sqrt(\1)", s)
+
+        # Fractions: \frac{a}{b} -> ((a)/(b))
+        for _ in range(5):
+            s = re.sub(r"\\frac\{([^{}]+)\}\{([^{}]+)\}", r"((\1)/(\2))", s)
 
         # Powers: x^{2} -> x**(2)
         s = re.sub(r"\^\{([^{}]+)\}", r"**(\1)", s)
@@ -93,10 +96,6 @@ class MathematicalEngine:
 
         # Subscripts: m_1 -> m_1, a_{eff} -> a_eff
         s = re.sub(r"\_\{([^{}]+)\}", r"_\1", s)
-
-        # Functions
-        s = re.sub(r"\\(sin|cos|tan|exp|ln|log|sinh|cosh|tanh)\b", r"\1", s)
-        s = s.replace(r"\ln", "ln")
 
         # Remove extra whitespace
         s = re.sub(r"\s+", " ", s).strip()
@@ -111,13 +110,13 @@ class MathematicalEngine:
         if not expr_str or not isinstance(expr_str, str):
             return None
 
-        # Injection prevention: block suspicious keywords
-        forbidden = [
-            "__", "import", "eval", "exec", "globals", "locals", "sys", "os", "subprocess",
-            "open", "compile", "builtins", "getattr", "setattr", "delattr", "read", "write"
-        ]
+        # Injection prevention: block suspicious keywords using word boundaries
         lowered = expr_str.lower()
-        if any(term in lowered for term in forbidden):
+        if "__" in lowered:
+            raise ValueError("Forbidden token detected in mathematical expression.")
+        
+        forbidden_regex = r"\b(import|eval|exec|globals|locals|sys|os|subprocess|open|compile|builtins|getattr|setattr|delattr)\b"
+        if re.search(forbidden_regex, lowered):
             raise ValueError("Forbidden token detected in mathematical expression.")
 
         # Pre-clean latex
