@@ -1,5 +1,6 @@
 # ThesisFlow: Core Requirements
 flask>=3.0.0
+gunicorn>=22.0.0
 reportlab>=4.0.0
 plotly>=5.20.0
 pymupdf>=1.24.0
