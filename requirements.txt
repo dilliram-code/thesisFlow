@@ -1,5 +1,6 @@
 # ThesisFlow: Core Requirements
-streamlit>=1.35.0
+flask>=3.0.0
+reportlab>=4.0.0
 plotly>=5.20.0
 pymupdf>=1.24.0
 pdfplumber>=0.11.0
@@ -10,4 +11,4 @@ pandas>=2.0.0
 google-genai>=2.30.1
 python-dotenv>=1.0.0
 pytest>=8.0.0
-
+streamlit>=1.35.0

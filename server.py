@@ -1,19 +1,17 @@
 """
-ThesisFlow FastAPI Application Server.
-Provides RESTful APIs for PDF ingestion, equation deconstruction,
-RAG reasoning, symbolic calculations, and serves the modern HTML5/CSS3/JS single-page frontend.
+ThesisFlow Web Server (Flask Implementation).
+Serves the modern, responsive, glassy HTML5/CSS3/JS frontend
+and provides RESTful APIs for PDF extraction, equation deconstruction,
+RAG reasoning, and scientific computing.
 """
 
 from pathlib import Path
 import os
 import json
 from typing import Optional, List, Dict, Any
+import io
 
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Query, Response
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from flask import Flask, request, jsonify, render_template, send_file, Response
 
 from config import BASE_DIR, DATA_DIR, UPLOADS_DIR, GEMINI_API_KEY, DEFAULT_GEMINI_MODEL
 from database.db import db
@@ -30,80 +28,28 @@ from core.variable_analyzer import VariableAnalyzer
 # Ensure demo papers exist on startup
 paper_service.initialize_demo_papers_if_empty()
 
-app = FastAPI(
-    title="ThesisFlow API",
-    description="The Interactive Math & Physics Research Paper Deconstructer",
-    version="1.0.0"
-)
-
-# CORS Middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Static and Templates Directories
 STATIC_DIR = BASE_DIR / "static"
 TEMPLATES_DIR = BASE_DIR / "templates"
-STATIC_DIR.mkdir(parents=True, exist_ok=True)
-TEMPLATES_DIR.mkdir(parents=True, exist_ok=True)
 
-app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
-
-
-# Pydantic Schemas for Requests
-class DeconstructRequest(BaseModel):
-    latex: str
-    context_text: Optional[str] = ""
-    section_title: Optional[str] = "General"
-    depth_level: Optional[str] = "Intermediate"
-    paper_title: Optional[str] = "Research Paper"
+app = Flask(
+    __name__,
+    static_folder=str(STATIC_DIR),
+    template_folder=str(TEMPLATES_DIR)
+)
 
 
-class CodeGenRequest(BaseModel):
-    latex: str
-    dependent_var: Optional[str] = "y"
-    independent_vars: Optional[List[str]] = None
-    equation_name: Optional[str] = "Calculated Equation"
+# --- Frontend Entrypoint ---
+
+@app.route("/")
+def index():
+    """Serves the glassy single-page research workspace."""
+    return render_template("index.html")
 
 
-class EvaluateGridRequest(BaseModel):
-    latex: str
-    independent_var: str
-    min_val: float
-    max_val: float
-    fixed_params: Dict[str, float]
-    num_points: Optional[int] = 200
-    target_dep_var: Optional[str] = None
+# --- REST API Endpoints ---
 
-
-class ChatRequest(BaseModel):
-    paper_id: int
-    query: str
-    depth_level: Optional[str] = "Intermediate"
-    history: Optional[List[Dict[str, str]]] = []
-
-
-class ExperimentCreate(BaseModel):
-    equation_id: Optional[int] = None
-    eq_code: str = ""
-    name: str = "Experiment Snapshot"
-    parameters: Dict[str, float] = {}
-    results: Dict[str, Any] = {}
-    notes: Optional[str] = ""
-
-
-class ApiKeyUpdate(BaseModel):
-    api_key: str
-
-
-# --- API Routes ---
-
-@app.get("/api/status")
-async def get_system_status():
+@app.route("/api/status", methods=["GET"])
+def get_system_status():
     """Returns system status, active Gemini model, and counts."""
     gemini = GeminiService()
     conn_info = gemini.is_connected()
@@ -111,7 +57,7 @@ async def get_system_status():
     eqs = db.get_all_equations()
     exps = db.get_experiments()
 
-    return {
+    return jsonify({
         "status": "online",
         "gemini": conn_info,
         "counts": {
@@ -120,61 +66,68 @@ async def get_system_status():
             "experiments": len(exps),
             "constants": len(get_all_constants())
         }
-    }
+    })
 
 
-@app.post("/api/settings/api-key")
-async def update_api_key(payload: ApiKeyUpdate):
+@app.route("/api/settings/api-key", methods=["POST"])
+def update_api_key():
     """Updates the Gemini API Key dynamically."""
-    os.environ["GEMINI_API_KEY"] = payload.api_key.strip()
-    gemini = GeminiService(api_key=payload.api_key.strip())
+    data = request.get_json(silent=True) or {}
+    api_key = (data.get("api_key") or "").strip()
+    os.environ["GEMINI_API_KEY"] = api_key
+    gemini = GeminiService(api_key=api_key)
     status = gemini.is_connected()
-    return {"success": True, "connection": status}
+    return jsonify({"success": True, "connection": status})
 
 
-@app.get("/api/papers")
-async def list_papers(search: Optional[str] = None):
+@app.route("/api/papers", methods=["GET"])
+def list_papers():
     """Lists all papers with optional query filtering."""
+    search = request.args.get("search", "").strip()
     papers = db.get_all_papers()
     if search:
         q = search.lower()
         papers = [p for p in papers if q in p.title.lower() or q in p.authors.lower() or q in p.abstract.lower()]
-    return [p.to_dict() for p in papers]
+    return jsonify([p.to_dict() for p in papers])
 
 
-@app.post("/api/papers/upload")
-async def upload_paper(file: UploadFile = File(...)):
+@app.route("/api/papers/upload", methods=["POST"])
+def upload_paper():
     """Uploads, validates, and processes a research paper PDF."""
-    if not file.filename.lower().endswith(".pdf"):
-        raise HTTPException(status_code=400, detail="Only PDF files are supported.")
+    if "file" not in request.files:
+        return jsonify({"detail": "No file part in request."}), 400
 
-    file_bytes = await file.read()
+    file = request.files["file"]
+    if not file.filename or not file.filename.lower().endswith(".pdf"):
+        return jsonify({"detail": "Only PDF files are supported."}), 400
+
+    file_bytes = file.read()
     try:
         paper, equations, msg = paper_service.process_uploaded_pdf(file_bytes, file.filename)
-        return {
+        return jsonify({
             "success": True,
             "paper": paper.to_dict(),
             "equations_count": len(equations),
             "message": msg
-        }
+        })
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        return jsonify({"detail": str(e)}), 400
 
 
-@app.post("/api/papers/reset-demos")
-async def reset_demo_papers():
+@app.route("/api/papers/reset-demos", methods=["POST"])
+def reset_demo_papers():
     """Re-initializes classical physics demo papers."""
     paper_service.initialize_demo_papers_if_empty()
     papers = db.get_all_papers()
-    return {"success": True, "papers_count": len(papers)}
+    return jsonify({"success": True, "papers_count": len(papers)})
 
 
-@app.get("/api/papers/{paper_id}")
-async def get_paper(paper_id: int):
+@app.route("/api/papers/<int:paper_id>", methods=["GET"])
+def get_paper(paper_id: int):
     """Gets paper by ID along with all cataloged equations."""
     paper, equations = paper_service.get_paper_with_equations(paper_id)
     if not paper:
-        raise HTTPException(status_code=404, detail="Paper not found.")
+        return jsonify({"detail": "Paper not found."}), 404
 
     # Read page text list if available
     pdf_path = Path(paper.filepath)
@@ -189,25 +142,28 @@ async def get_paper(paper_id: int):
         except Exception:
             pass
 
-    return {
+    return jsonify({
         "paper": paper.to_dict(),
         "equations": [e.to_dict() for e in equations],
         "pages_text": pages_text
-    }
+    })
 
 
-@app.delete("/api/papers/{paper_id}")
-async def delete_paper(paper_id: int):
+@app.route("/api/papers/<int:paper_id>", methods=["DELETE"])
+def delete_paper(paper_id: int):
     """Deletes paper and all related equations and experiments."""
     success = db.delete_paper(paper_id)
     if not success:
-        raise HTTPException(status_code=404, detail="Paper not found or already deleted.")
-    return {"success": True, "message": f"Paper {paper_id} deleted."}
+        return jsonify({"detail": "Paper not found or already deleted."}), 404
+    return jsonify({"success": True, "message": f"Paper {paper_id} deleted."})
 
 
-@app.get("/api/equations")
-async def list_equations(paper_id: Optional[int] = None, category: Optional[str] = None):
+@app.route("/api/equations", methods=["GET"])
+def list_equations():
     """Lists equations with optional paper or category filtering."""
+    paper_id = request.args.get("paper_id", type=int)
+    category = request.args.get("category", "")
+
     if paper_id:
         eqs = db.get_equations_by_paper(paper_id)
     else:
@@ -216,30 +172,31 @@ async def list_equations(paper_id: Optional[int] = None, category: Optional[str]
     if category and category != "All":
         eqs = [e for e in eqs if e.category.lower() == category.lower()]
 
-    return [e.to_dict() for e in eqs]
+    return jsonify([e.to_dict() for e in eqs])
 
 
-@app.get("/api/equations/{equation_id}")
-async def get_equation(equation_id: int):
+@app.route("/api/equations/<int:equation_id>", methods=["GET"])
+def get_equation(equation_id: int):
     """Gets single equation by ID."""
     eq = db.get_equation_by_id(equation_id)
     if not eq:
-        raise HTTPException(status_code=404, detail="Equation not found.")
-    return eq.to_dict()
+        return jsonify({"detail": "Equation not found."}), 404
+    return jsonify(eq.to_dict())
 
 
-@app.post("/api/equations/{equation_id}/deconstruct")
-async def deconstruct_equation_endpoint(equation_id: int, payload: Optional[DeconstructRequest] = None):
+@app.route("/api/equations/<int:equation_id>/deconstruct", methods=["POST"])
+def deconstruct_equation_endpoint(equation_id: int):
     """Runs or fetches cached AI equation deconstruction."""
     eq = db.get_equation_by_id(equation_id)
     if not eq:
-        raise HTTPException(status_code=404, detail="Equation not found.")
+        return jsonify({"detail": "Equation not found."}), 404
 
-    if eq.explanation and not payload:
-        return {"success": True, "explanation": eq.explanation, "cached": True}
+    data = request.get_json(silent=True) or {}
+    depth = data.get("depth_level", "Intermediate")
+    paper_title = data.get("paper_title", "Research Paper")
 
-    depth = payload.depth_level if payload else "Intermediate"
-    paper_title = payload.paper_title if payload else "Research Paper"
+    if eq.explanation and not data:
+        return jsonify({"success": True, "explanation": eq.explanation, "cached": True})
 
     gemini = GeminiService()
     explanation = gemini.deconstruct_equation(
@@ -250,63 +207,79 @@ async def deconstruct_equation_endpoint(equation_id: int, payload: Optional[Deco
         paper_title=paper_title
     )
 
-    # Cache in DB
     db.update_equation_explanation(eq.id, explanation, eq.variables)
     eq.explanation = explanation
 
-    return {"success": True, "explanation": explanation, "cached": False}
+    return jsonify({"success": True, "explanation": explanation, "cached": False})
 
 
-@app.post("/api/equations/code")
-async def generate_code_endpoint(payload: CodeGenRequest):
+@app.route("/api/equations/code", methods=["POST"])
+def generate_code_endpoint():
     """Generates Python, NumPy, SymPy, and Plotly code implementations."""
+    data = request.get_json(silent=True) or {}
+    latex = data.get("latex", "")
+    dep_var = data.get("dependent_var", "y")
+    indep_vars = data.get("independent_vars") or ["x"]
+    eq_name = data.get("equation_name", "calculate_quantity")
+
     code_suite = CodeGenerator.generate_all_implementations(
-        latex_str=payload.latex,
-        dependent_var=payload.dependent_var or "y",
-        independent_vars=payload.independent_vars or ["x"],
-        equation_name=payload.equation_name or "calculate_quantity"
+        latex_str=latex,
+        dependent_var=dep_var,
+        independent_vars=indep_vars,
+        equation_name=eq_name
     )
-    return {"success": True, "code": code_suite}
+    return jsonify({"success": True, "code": code_suite})
 
 
-@app.post("/api/playground/evaluate")
-async def evaluate_playground_grid(payload: EvaluateGridRequest):
+@app.route("/api/playground/evaluate", methods=["POST"])
+def evaluate_playground_grid():
     """Evaluates a formula over a 1D grid for real-time visualization."""
-    parsed = MathematicalEngine.safe_parse(payload.latex)
+    data = request.get_json(silent=True) or {}
+    latex = data.get("latex", "")
+    indep_var = data.get("independent_var", "x")
+    min_val = float(data.get("min_val", 0.1))
+    max_val = float(data.get("max_val", 50.0))
+    fixed_params = data.get("fixed_params", {})
+    num_points = int(data.get("num_points", 200))
+    target_dep = data.get("target_dep_var")
+
+    parsed = MathematicalEngine.safe_parse(latex)
     if parsed is None:
-        raise HTTPException(status_code=400, detail="Could not parse expression symbolically.")
+        return jsonify({"detail": "Could not parse expression symbolically."}), 400
 
     x_vals, y_vals, msg = MathematicalEngine.generate_1d_grid(
         expr=parsed,
-        independent_var=payload.independent_var,
-        min_val=payload.min_val,
-        max_val=payload.max_val,
-        fixed_params=payload.fixed_params,
-        num_points=payload.num_points or 200,
-        target_dep_var=payload.target_dep_var
+        independent_var=indep_var,
+        min_val=min_val,
+        max_val=max_val,
+        fixed_params=fixed_params,
+        num_points=num_points,
+        target_dep_var=target_dep
     )
 
     eval_point = MathematicalEngine.evaluate_numerical_point(
         parsed,
-        payload.fixed_params,
-        target_dep_var=payload.target_dep_var
+        fixed_params,
+        target_dep_var=target_dep
     )
 
-    # Clean NaN/Inf for JSON compliance
     clean_y = [None if (val is None or val != val or abs(val) == float('inf')) else float(val) for val in y_vals]
 
-    return {
+    return jsonify({
         "success": True,
         "x": x_vals.tolist(),
         "y": clean_y,
         "operating_point_y": eval_point,
         "status_message": msg
-    }
+    })
 
 
-@app.get("/api/constants")
-async def list_constants(category: Optional[str] = None, search: Optional[str] = None):
+@app.route("/api/constants", methods=["GET"])
+def list_constants():
     """Lists fundamental physical constants with optional filtering."""
+    category = request.args.get("category", "")
+    search = request.args.get("search", "")
+
     consts = get_all_constants()
     if category and category != "All":
         consts = [c for c in consts if c.category.lower() == category.lower()]
@@ -314,7 +287,7 @@ async def list_constants(category: Optional[str] = None, search: Optional[str] =
         q = search.lower()
         consts = [c for c in consts if q in c.name.lower() or q in c.symbol.lower() or q in c.meaning.lower()]
 
-    return [
+    return jsonify([
         {
             "symbol": c.symbol,
             "latex_symbol": c.latex_symbol,
@@ -330,27 +303,33 @@ async def list_constants(category: Optional[str] = None, search: Optional[str] =
             "category": c.category
         }
         for c in consts
-    ]
+    ])
 
 
-@app.post("/api/chat")
-async def chat_endpoint(payload: ChatRequest):
+@app.route("/api/chat", methods=["POST"])
+def chat_endpoint():
     """Conversational RAG query grounded in the paper."""
-    paper = db.get_paper_by_id(payload.paper_id)
-    if not paper:
-        raise HTTPException(status_code=404, detail="Paper not found.")
+    data = request.get_json(silent=True) or {}
+    paper_id = data.get("paper_id")
+    query = data.get("query", "")
+    depth = data.get("depth_level", "Intermediate")
+    history = data.get("history", [])
 
-    chunks = rag_service.retrieve(payload.paper_id, payload.query, top_k=4)
+    paper = db.get_paper_by_id(paper_id)
+    if not paper:
+        return jsonify({"detail": "Paper not found."}), 404
+
+    chunks = rag_service.retrieve(paper_id, query, top_k=4)
     gemini = GeminiService()
     reply = gemini.generate_chat_response(
-        query=payload.query,
+        query=query,
         context_chunks=chunks,
         paper_title=paper.title,
-        conversation_history=payload.history or [],
-        depth_level=payload.depth_level or "Intermediate"
+        conversation_history=history,
+        depth_level=depth
     )
 
-    return {
+    return jsonify({
         "success": True,
         "response": reply,
         "citations": [
@@ -362,73 +341,63 @@ async def chat_endpoint(payload: ChatRequest):
             }
             for c in chunks
         ]
-    }
+    })
 
 
-@app.get("/api/experiments")
-async def list_experiments(equation_id: Optional[int] = None):
+@app.route("/api/experiments", methods=["GET"])
+def list_experiments():
     """Lists saved experiments."""
-    exps = db.get_experiments(equation_id)
-    return [e.to_dict() for e in exps]
+    eq_id = request.args.get("equation_id", type=int)
+    exps = db.get_experiments(eq_id)
+    return jsonify([e.to_dict() for e in exps])
 
 
-@app.post("/api/experiments")
-async def create_experiment(exp: ExperimentCreate):
+@app.route("/api/experiments", methods=["POST"])
+def create_experiment():
     """Saves a new experiment snapshot."""
+    data = request.get_json(silent=True) or {}
     new_exp = Experiment(
-        equation_id=exp.equation_id,
-        eq_code=exp.eq_code,
-        name=exp.name,
-        parameters=exp.parameters,
-        results=exp.results,
-        notes=exp.notes or ""
+        equation_id=data.get("equation_id"),
+        eq_code=data.get("eq_code", ""),
+        name=data.get("name", "Experiment Snapshot"),
+        parameters=data.get("parameters", {}),
+        results=data.get("results", {}),
+        notes=data.get("notes", "")
     )
     exp_id = db.insert_experiment(new_exp)
     new_exp.id = exp_id
-    return {"success": True, "experiment": new_exp.to_dict()}
+    return jsonify({"success": True, "experiment": new_exp.to_dict()})
 
 
-@app.get("/api/reports/paper/{paper_id}/pdf")
-async def export_paper_pdf(paper_id: int):
+@app.route("/api/reports/paper/<int:paper_id>/pdf", methods=["GET"])
+def export_paper_pdf(paper_id: int):
     """Generates and downloads a complete publication-grade PDF report."""
     try:
         pdf_bytes = report_service.generate_paper_pdf_report(paper_id)
         paper = db.get_paper_by_id(paper_id)
         safe_title = (paper.title[:30] if paper else f"paper_{paper_id}").replace(" ", "_")
-        return Response(
-            content=pdf_bytes,
-            media_type="application/pdf",
-            headers={"Content-Disposition": f"attachment; filename=ThesisFlow_Report_{safe_title}.pdf"}
+        return send_file(
+            io.BytesIO(pdf_bytes),
+            mimetype="application/pdf",
+            as_attachment=True,
+            download_name=f"ThesisFlow_Report_{safe_title}.pdf"
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        return jsonify({"detail": str(e)}), 500
 
 
-@app.get("/api/reports/paper/{paper_id}/markdown")
-async def export_paper_markdown(paper_id: int):
+@app.route("/api/reports/paper/<int:paper_id>/markdown", methods=["GET"])
+def export_paper_markdown(paper_id: int):
     """Generates and downloads full paper dossier in Markdown."""
     md_text = report_service.generate_paper_full_markdown_report(paper_id)
     paper = db.get_paper_by_id(paper_id)
     safe_title = (paper.title[:30] if paper else f"paper_{paper_id}").replace(" ", "_")
     return Response(
-        content=md_text,
-        media_type="text/markdown",
+        md_text,
+        mimetype="text/markdown",
         headers={"Content-Disposition": f"attachment; filename=ThesisFlow_{safe_title}.md"}
     )
 
 
-# --- Serve HTML Frontend ---
-
-@app.get("/", response_class=HTMLResponse)
-async def serve_index():
-    """Serves the main single-page web app."""
-    index_path = TEMPLATES_DIR / "index.html"
-    if not index_path.exists():
-        return HTMLResponse("<h1>ThesisFlow</h1><p>Frontend template not initialized.</p>")
-    with open(index_path, "r", encoding="utf-8") as f:
-        return HTMLResponse(content=f.read())
-
-
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=True)
+    app.run(host="0.0.0.0", port=8000, debug=True)
