@@ -252,3 +252,4 @@ CRITICAL RESEARCH RULES:
             return resp.text or "No response generated."
         except Exception as e:
             return f"❌ **Error generating response from Gemini API:** {str(e)}"
+

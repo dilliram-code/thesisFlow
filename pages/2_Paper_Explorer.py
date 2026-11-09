@@ -102,3 +102,4 @@ with right_col:
             st.markdown("#### Other Equations in this Paper:")
             for eq in paper_eqs[:3]:
                 render_equation_card(eq, paper_title=active_paper.title, allow_playground=True)
+

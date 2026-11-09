@@ -102,3 +102,4 @@ else:
                     db.delete_paper(paper.id)
                     st.success(f"Deleted '{paper.title}'")
                     st.rerun()
+

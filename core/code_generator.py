@@ -283,3 +283,4 @@ print("SciPy Analysis for {latex_str}")
 # print(f"Numerical Integral: {{res}} +/- {{err}}")
 '''
         return code
+

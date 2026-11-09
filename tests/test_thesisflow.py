@@ -267,3 +267,4 @@ def test_rag_service():
     retrieved = rag.retrieve(paper_id=999, query="mass-energy equivalence in special relativity", top_k=1)
     assert len(retrieved) > 0
     assert retrieved[0]["page"] == 1
+

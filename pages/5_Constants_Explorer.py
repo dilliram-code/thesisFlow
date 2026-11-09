@@ -76,3 +76,4 @@ for const in filtered_constants:
 
         with st.expander(f"Canonical Governing Equations for {const.symbol}", expanded=False):
             st.latex(const.canonical_equation)
+

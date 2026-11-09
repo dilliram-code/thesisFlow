@@ -98,3 +98,4 @@ if user_query:
     # Save to session
     chat_history.append({"role": "assistant", "content": response_text})
     st.session_state["chat_messages"] = chat_history
+

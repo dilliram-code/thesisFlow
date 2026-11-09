@@ -173,3 +173,4 @@ def render_equation_card(eq: Equation, paper_title: str = "Research Paper", allo
                         st.markdown(f"- ⚠️ {lim}")
 
         st.markdown("<hr style='border: none; border-bottom: 1px solid #1E293B; margin: 16px 0;'>", unsafe_allow_html=True)
+

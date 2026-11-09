@@ -102,3 +102,4 @@ def render_sidebar():
             </div>
         </div>
         """, unsafe_allow_html=True)
+

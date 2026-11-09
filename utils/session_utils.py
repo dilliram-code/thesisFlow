@@ -62,3 +62,4 @@ def get_active_equation() -> Optional[Equation]:
 def set_active_equation(eq_id: int):
     """Sets currently selected equation for playground or deconstruction."""
     st.session_state["active_equation_id"] = eq_id
+

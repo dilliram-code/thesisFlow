@@ -24,3 +24,4 @@ def load_custom_css(css_path: Path) -> str:
         with open(css_path, "r", encoding="utf-8") as f:
             return f"<style>{f.read()}</style>"
     return ""
+

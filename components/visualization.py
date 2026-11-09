@@ -213,3 +213,4 @@ class ScientificVisualizer:
             margin=dict(l=40, r=40, t=50, b=40)
         )
         return fig
+

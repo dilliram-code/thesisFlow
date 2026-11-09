@@ -71,3 +71,4 @@ THEME_CONFIG = {
         "accent_rose": "#E11D48",
     }
 }
+

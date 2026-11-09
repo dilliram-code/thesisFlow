@@ -287,3 +287,4 @@ class Database:
 
 # Singleton database instance
 db = Database()
+

@@ -63,3 +63,4 @@ st.markdown("""
 5. **Ask the Research Assistant:** Open the **AI Research Assistant** to ask targeted questions about derivations, assumptions, or model comparisons with grounded page citations.
 6. **Export Code & Reports:** Download fully commented Python scripts or complete Markdown analysis reports for your research notes.
 """)
+

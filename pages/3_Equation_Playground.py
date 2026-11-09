@@ -315,3 +315,4 @@ with exp_col2:
         )
         exp_id = db.insert_experiment(new_exp)
         st.success(f"Snapshot #{exp_id} saved successfully!")
+

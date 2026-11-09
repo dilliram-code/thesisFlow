@@ -80,3 +80,4 @@ class Experiment:
         d["parameters_json"] = json.dumps(self.parameters)
         d["results_json"] = json.dumps(self.results)
         return d
+

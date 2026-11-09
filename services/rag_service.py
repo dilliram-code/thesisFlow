@@ -164,3 +164,4 @@ class RAGService:
 
 # Singleton RAG service instance
 rag_service = RAGService()
+

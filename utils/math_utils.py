@@ -33,3 +33,4 @@ def clean_latex_string(s: str) -> str:
     if clean.startswith("$") and clean.endswith("$"):
         clean = clean[1:-1].strip()
     return clean
+

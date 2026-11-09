@@ -198,3 +198,4 @@ class EquationExtractor:
         # Strip outer dollar signs
         f = re.sub(r"^\$+|\$+$", "", f)
         return f.strip()
+

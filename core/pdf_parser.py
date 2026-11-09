@@ -159,3 +159,4 @@ class PDFParser:
             clean = re.sub(r"\s+", " ", m.group(1)).strip()
             return clean[:1200]
         return "No explicit abstract section detected in document header."
+

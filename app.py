@@ -175,3 +175,4 @@ else:
             if p:
                 set_active_paper(p.id)
                 st.rerun()
+

@@ -57,3 +57,4 @@ def render_header():
         """, unsafe_allow_html=True)
     else:
         st.info("ℹ️ No paper active. Please select or upload a research paper from the Research Library or Dashboard.")
+
