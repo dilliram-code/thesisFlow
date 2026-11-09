@@ -1,0 +1,183 @@
+/* ThesisFlow: Scientific Academic Theme */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Fira+Code:wght@400;500&display=swap');
+
+:root {
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --primary-accent: #00E5FF;
+  --secondary-accent: #8B5CF6;
+  --electric-blue: #3B82F6;
+  --bg-card: #141C2E;
+  --border-card: #23314A;
+  --text-main: #F8FAFC;
+  --text-dim: #94A3B8;
+}
+
+/* Base Body Adjustments */
+html, body, [class*="css"] {
+  font-family: var(--font-sans);
+}
+
+/* Custom Header Banner */
+.thesisflow-header {
+  background: linear-gradient(135deg, rgba(16, 24, 40, 0.95) 0%, rgba(10, 14, 26, 0.98) 100%);
+  border: 1px solid #1E293B;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  position: relative;
+  overflow: hidden;
+}
+
+.thesisflow-header::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #00E5FF, #3B82F6, #8B5CF6);
+}
+
+.thesisflow-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 9999px;
+  background: rgba(0, 229, 255, 0.12);
+  color: #00E5FF;
+  border: 1px solid rgba(0, 229, 255, 0.3);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.badge-verified {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10B981;
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.badge-warning {
+  background: rgba(245, 158, 11, 0.12);
+  color: #F59E0B;
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.badge-purple {
+  background: rgba(139, 92, 246, 0.12);
+  color: #A78BFA;
+  border-color: rgba(139, 92, 246, 0.3);
+}
+
+/* Metric / Stat Card */
+.stat-card {
+  background: #141C2E;
+  border: 1px solid #23314A;
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.stat-card:hover {
+  border-color: #38BDF8;
+  transform: translateY(-2px);
+}
+
+.stat-value {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #F8FAFC;
+  font-family: var(--font-mono);
+}
+
+.stat-label {
+  font-size: 0.8rem;
+  color: #94A3B8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Equation Card Container */
+.equation-card {
+  background: #141C2E;
+  border: 1px solid #23314A;
+  border-radius: 10px;
+  padding: 18px;
+  margin-bottom: 16px;
+  transition: all 0.2s ease;
+}
+
+.equation-card:hover {
+  border-color: rgba(0, 229, 255, 0.4);
+  box-shadow: 0 4px 16px rgba(0, 229, 255, 0.05);
+}
+
+.equation-latex-display {
+  background: #0B1120;
+  border: 1px solid #1E293B;
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+  overflow-x: auto;
+  margin: 12px 0;
+}
+
+/* Variable Breakdown Table */
+.var-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  margin: 12px 0;
+}
+
+.var-table th {
+  background: #0F172A;
+  color: #94A3B8;
+  text-align: left;
+  padding: 8px 12px;
+  font-weight: 600;
+  border-bottom: 1px solid #1E293B;
+}
+
+.var-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #1A2234;
+  color: #E2E8F0;
+}
+
+.var-symbol {
+  font-family: var(--font-mono);
+  color: #38BDF8;
+  font-weight: 600;
+}
+
+/* Code Block styling */
+pre, code {
+  font-family: var(--font-mono) !important;
+}
+
+/* Subtle scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0A0E1A;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #23314A;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3B82F6;
+}
